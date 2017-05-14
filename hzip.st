@@ -6,6 +6,7 @@ nl := Character nl.
 flag := nil.
 filename := nil.
 priority := SortedCollection new.
+hufTree := nil.
 
 Character extend [
    isPrint [
@@ -155,16 +156,65 @@ stdout flush.
          freqtable incr: ordChar.
       ].
       
-      infile close.
+      "infile close."
 
       freqtable keysAndValuesDo: [:key :value |
          (value notNil and: [value > 0]) ifTrue: [
          stdout << 'freq[' << key asCharacter visible << ']=' << value
                 << nl.
          ]
+      ].   
+
+      freqtable keysAndValuesDo: [:key :value |
+         (value notNil and: [value > 0]) ifTrue: [
+            |tempLeaf|
+            tempLeaf := Leaf new: key count: value.
+            priority add: tempLeaf. 
+         ]
       ].
-      
-      
+
+      "Not working*************************" 
+      [priority notEmpty] whileTrue: [
+         |tTree tLeft tRight|
+         29 printNl.
+         tLeft := priority removeFirst.
+         priority size printNl.
+
+         tRight := priority removeFirst.
+         priority size printNl.
+
+         tTree := Tree new: $w count:((tLeft count)+(tRight count)) left: tLeft right: tRight.
+         tTree inorder: [:char :string | stdout << '[' << char << ']=' << string << nl.] prefix: ''.
+         priority size printNl.
+         "priority add: tTree."
+         "priority notEmpty 
+         ifTrue: [
+            priority size printNl.
+
+            priority add: tTree.
+         priority size printNl.
+
+         ]
+         ifFalse: [
+            hufTree := tTree.
+         ]
+         priority size printNl."
+      ].
+      "*********************************"
+
+ 
    ]
 
+"iterate over frequency table. create a leaf node for every non-nil
+ element and add it to the priority queue"
+"freqtable keysAndValuesDo: [:key :value |
+   (value notNil and: [value > 0]) ifTrue: [
+      |tempLeaf|
+      tempLeaf := Leaf new: key count: value.
+      priority add: tempLeaf. 
+   ]
+
+].
+
+priority inspect."
 
