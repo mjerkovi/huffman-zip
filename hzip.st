@@ -8,6 +8,10 @@ filename := nil.
 priority := SortedCollection new.
 hufTree := nil.
 
+
+
+
+
 Character extend [
    isPrint [
       ^ (Character space <= self) & (self <= $~)
@@ -132,13 +136,16 @@ Leaf subclass: Tree [
    ]
 ]
 
-freqtable := ZeroArray new: 257.
-"entry 256 will represent the EOF character"
-freqtable at: 256 put: 1.
 
 "Smalltalk arguments size printNl."
 stdout << (Smalltalk arguments size) << nl.
 stdout flush.
+
+freqtable := ZeroArray new: 257.
+"entry 256 will represent the EOF character"
+freqtable at: 256 put: 1.
+
+encodeTable := ZeroArray new: 257.
 
 (Smalltalk arguments size < 2) | (Smalltalk arguments size > 3)
    ifTrue: [^self error: 'wrong number of arguments']
@@ -172,36 +179,32 @@ stdout flush.
             priority add: tempLeaf. 
          ]
       ].
-
+ 
       "Not working*************************" 
       [priority notEmpty] whileTrue: [
-         |tTree tLeft tRight|
-         29 printNl.
          tLeft := priority removeFirst.
-         priority size printNl.
-
          tRight := priority removeFirst.
-         priority size printNl.
-
-         tTree := Tree new: $w count:((tLeft count)+(tRight count)) left: tLeft right: tRight.
-         tTree inorder: [:char :string | stdout << '[' << char << ']=' << string << nl.] prefix: ''.
-         priority size printNl.
-         "priority add: tTree."
-         "priority notEmpty 
+         tTree := Tree new: 0 count: ((tLeft count) + (tRight count)) 
+                                              left: tLeft right: tRight.
+        " 'Intermediate tree: ' printNl."
+        " tTree inorder: [:char :string | stdout << '[' << char << ']=' << string << nl.] prefix: ''."
+         priority notEmpty 
          ifTrue: [
-            priority size printNl.
-
             priority add: tTree.
-         priority size printNl.
-
          ]
          ifFalse: [
             hufTree := tTree.
          ]
-         priority size printNl."
       ].
       "*********************************"
+      
+      "hufTree inorder: [:char :string | stdout << '[' << char << ']=' 
+                                           << string << nl.] prefix: ''."
+      hufTree inorder: [:chr :str | encodeTable at: chr put: str.]
+                        prefix: ''.
 
+      "if -t flag is set then print encode table and freq table.
+       see 3e) in spec for more details"     
  
    ]
 
