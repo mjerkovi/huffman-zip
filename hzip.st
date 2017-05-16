@@ -6,8 +6,8 @@ nl := Character nl.
 flag := nil.
 filename := nil.
 priority := SortedCollection new.
-hufTree := nil.
-
+hufTree := ni.
+bitArray := Array new.
 
 
 
@@ -105,6 +105,28 @@ Object subclass: Leaf [
       visitor value: char value: string.
    ]
 
+   postorder: bitArr [
+      |bitIdx tempArr tempBit|
+
+      bitIdx := 8.
+      tempArr := bitArr.
+      tempArr := tempArr, #(0).
+      [bitIdx = 0] whileFalse: [
+         tempBit := Array new: 1.
+         tempBit at: 1 put: (char bitAt: bitIdx).
+         tempArr := tempArr, tempBit.
+         bitIdx := bitIdx - 1.
+      ].
+      char = 0 ifTrue: [
+         tempArr := tempArr, #(0).
+      ].
+      char = 256 ifTrue: [
+         tempArr := tempArr, #(1).
+      ].
+      ^ tempArr
+   ]
+
+ 
 ]
 
 Leaf subclass: Tree [
@@ -133,6 +155,15 @@ Leaf subclass: Tree [
    inorder: visitor prefix: string [
       left inorder: visitor prefix: string, '0'.
       right inorder: visitor prefix: string, '1'.
+   ]
+
+   postorder: bitArr [
+      |tempArr|
+      tempArr := bitArr.
+      tempArr := tempArr, (left postorder: bitArr).
+      tempArr := tempArr, (right postorder: bitArr).
+      tempArr := tempArr, #(1).
+      ^ tempArr
    ]
 ]
 
@@ -202,6 +233,16 @@ encodeTable := ZeroArray new: 257.
                                            << string << nl.] prefix: ''."
       hufTree inorder: [:chr :str | encodeTable at: chr put: str.]
                         prefix: ''.
+
+
+      "hufTree postorder: bitArray."
+      lffff := Leaf new: 56 count: 10.
+
+      bitArray := hufTree postorder: bitArray.
+
+      
+
+      bitArray inspect.
 
       "if -t flag is set then print encode table and freq table.
        see 3e) in spec for more details"     
