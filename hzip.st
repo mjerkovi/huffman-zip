@@ -4,7 +4,6 @@
 "global vars"
 nl := Character nl.
 flag := nil.
-filename := nil.
 priority := SortedCollection new.
 hufTree := ni.
 bitArray := Array new.
@@ -181,12 +180,19 @@ encodeTable := ZeroArray new: 257.
 (Smalltalk arguments size < 2) | (Smalltalk arguments size > 3)
    ifTrue: [^self error: 'wrong number of arguments']
    ifFalse: [
+      |outFilename inFilename eofEncStr eofEncArr eofTempArr|
+      outFilename := nil.
+      inFilename := nil.
       flag := Smalltalk arguments at: 1.
       "Parse flag later, maybe put each individual character into a set"
       stdout << flag << nl.
       stdout flush.
-      filename := Smalltalk arguments at: 2.
-      infile := FileStream open: filename
+      inFilename := Smalltalk arguments at: 2.
+      (Smalltalk arguments size = 3) ifTrue: [
+         outFilename := Smalltalk arguments at: 3.
+      ].
+      
+      infile := FileStream open: inFilename
                            mode: FileStream read.
       [infile atEnd not] whileTrue: [
          |ordChar|
@@ -194,7 +200,9 @@ encodeTable := ZeroArray new: 257.
          freqtable incr: ordChar.
       ].
       
-      "infile close."
+      infile close.
+
+      'freq table' printNl.
 
       freqtable keysAndValuesDo: [:key :value |
          (value notNil and: [value > 0]) ifTrue: [
@@ -235,18 +243,45 @@ encodeTable := ZeroArray new: 257.
                         prefix: ''.
 
 
-      "hufTree postorder: bitArray."
-      lffff := Leaf new: 56 count: 10.
 
+      'enc huf tree' printNl.
       bitArray := hufTree postorder: bitArray.
 
+      bitArray := bitArray, #(1).
+
+      infile := FileStream open: inFilename 
+                           mode: FileStream read.
+
+      'post order done' printNl.
+      [infile atEnd not] whileTrue: [
+         |ordChar tempArr tempStr tempCharArr|
+         tempArr := Array new.
+         ordChar := infile next asInteger.
+         tempStr := encodeTable at: ordChar.
+         tempStr do: [:c | 
+            tempCharArr := Array new: 1.
+            tempCharArr at: 1 put: ((c asString) asInteger).
+            tempArr := tempArr, tempCharArr.                 
+         ].
+         bitArray := bitArray, tempArr.
+      ].
       
+      eofEncArr := Array new.
+      eofEncStr := encodeTable at: 256.
+      eofEncStr do: [:c |
+         eofTempArr := Array new: 1.
+         eofTempArr at: 1 put: ((c asString) asInteger).
+         eofEncArr := eofEncArr, eofTempArr.
+      ]. 
 
-      bitArray inspect.
+      bitArray := bitArray, eofEncArr.
+      
+      infile close.
 
-      "if -t flag is set then print encode table and freq table.
-       see 3e) in spec for more details"     
- 
+      'encode table' printNl.
+      "encodeTable inspect."
+      "bitArray inspect."
+
    ]
 
 "iterate over frequency table. create a leaf node for every non-nil
