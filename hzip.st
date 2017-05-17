@@ -222,8 +222,13 @@ encodeTable := ZeroArray new: 257.
       inFilename := nil.
       flag := Smalltalk arguments at: 1.
       "Parse flag later, maybe put each individual character into a set"
-      stdout << flag << nl.
-      stdout flush.
+      flagSet := Set new.
+      i := 2.
+      [i = ((flag size) + 1)] whileFalse: [
+         flagSet add: (flag at: i).
+         i := i + 1.
+      ].
+      
       inFilename := Smalltalk arguments at: 2.
       (Smalltalk arguments size = 3) ifTrue: [
          outFilename := Smalltalk arguments at: 3.
@@ -231,137 +236,141 @@ encodeTable := ZeroArray new: 257.
       
       infile := FileStream open: inFilename
                            mode: FileStream read.
-      [infile atEnd not] whileTrue: [
-         |ordChar|
-         ordChar := infile next asInteger.
-         freqtable incr: ordChar.
-      ].
-      
-      infile close.
-
-      'freq table' printNl.
-
-      freqtable keysAndValuesDo: [:key :value |
-         (value notNil and: [value > 0]) ifTrue: [
-         stdout << 'freq[' << key asCharacter visible << ']=' << value
-                << nl.
-         ]
-      ].   
-
-      freqtable keysAndValuesDo: [:key :value |
-         (value notNil and: [value > 0]) ifTrue: [
-            |tempLeaf|
-            tempLeaf := Leaf new: key count: value.
-            priority add: tempLeaf. 
-         ]
-      ].
- 
-      "Not working*************************" 
-      [priority notEmpty] whileTrue: [
-         tLeft := priority removeFirst.
-         tRight := priority removeFirst.
-         tTree := Tree new: 0 count: ((tLeft count) + (tRight count)) 
-                                              left: tLeft right: tRight.
-        " 'Intermediate tree: ' printNl."
-        " tTree inorder: [:char :string | stdout << '[' << char << ']=' << string << nl.] prefix: ''."
-         priority notEmpty 
-         ifTrue: [
-            priority add: tTree.
-         ]
-         ifFalse: [
-            hufTree := tTree.
-         ]
-      ].
-      "*********************************"
-      
-      "hufTree inorder: [:char :string | stdout << '[' << char << ']=' 
-                                           << string << nl.] prefix: ''."
-      hufTree inorder: [:chr :str | encodeTable at: chr put: str.]
-                        prefix: ''.
 
 
-
-      'enc huf tree' printNl.
-      bitArray := hufTree postorder: bitArray.
-
-      bitArray := bitArray, #(1).
-
-      infile := FileStream open: inFilename 
-                           mode: FileStream read.
-
-      'post order done' printNl.
-      [infile atEnd not] whileTrue: [
-         |ordChar tempArr tempStr tempCharArr|
-         tempArr := Array new.
-         ordChar := infile next asInteger.
-         tempStr := encodeTable at: ordChar.
-         tempStr do: [:c | 
-            tempCharArr := Array new: 1.
-            tempCharArr at: 1 put: ((c asString) asInteger).
-            tempArr := tempArr, tempCharArr.                 
+      (flagSet includes: $t) | (flagSet includes: $c) 
+      ifTrue: [
+         "if the flag contains t or c, go to encoding."
+         [infile atEnd not] whileTrue: [
+            |ordChar|
+            ordChar := infile next asInteger.
+            freqtable incr: ordChar.
          ].
-         bitArray := bitArray, tempArr.
+         
+         infile close.
+         "format this "
+         'freq table' printNl.
+
+         freqtable keysAndValuesDo: [:key :value |
+            (value notNil and: [value > 0]) ifTrue: [
+            stdout << 'freq[' << key asCharacter visible << ']=' << value
+                   << nl.
+            ]
+         ].   
+
+         freqtable keysAndValuesDo: [:key :value |
+            (value notNil and: [value > 0]) ifTrue: [
+               |tempLeaf|
+               tempLeaf := Leaf new: key count: value.
+               priority add: tempLeaf. 
+            ]
+         ].
+    
+         [priority notEmpty] whileTrue: [
+            tLeft := priority removeFirst.
+            tRight := priority removeFirst.
+            tTree := Tree new: 0 count: ((tLeft count) + (tRight count)) 
+                                                 left: tLeft right: tRight.
+            priority notEmpty 
+            ifTrue: [
+               priority add: tTree.
+            ]
+            ifFalse: [
+               hufTree := tTree.
+            ]
+         ].
+         
+         hufTree inorder: [:chr :str | encodeTable at: chr put: str.]
+                           prefix: ''.
+
+
+
+         'enc huf tree' printNl.
+         bitArray := hufTree postorder: bitArray.
+
+         bitArray := bitArray, #(1).
+
+         (flagSet includes: $t) 
+         ifTrue: [ 
+            'to implement' printNl.
+         ].
+
+
+         (flagSet includes: $c) 
+         ifTrue: [
+    
+            infile := FileStream open: inFilename 
+                                 mode: FileStream read.
+
+            'post order done' printNl.
+            [infile atEnd not] whileTrue: [
+               |ordChar tempArr tempStr tempCharArr|
+               tempArr := Array new.
+               ordChar := infile next asInteger.
+               tempStr := encodeTable at: ordChar.
+               tempStr do: [:c | 
+                  tempCharArr := Array new: 1.
+                  tempCharArr at: 1 put: ((c asString) asInteger).
+                  tempArr := tempArr, tempCharArr.                 
+               ].
+               bitArray := bitArray, tempArr.
+            ].
+            
+            eofEncArr := Array new.
+            eofEncStr := encodeTable at: 256.
+            eofEncStr do: [:c |
+               eofTempArr := Array new: 1.
+               eofTempArr at: 1 put: ((c asString) asInteger).
+               eofEncArr := eofEncArr, eofTempArr.
+            ]. 
+
+            bitArray := bitArray, eofEncArr.
+
+            paddingZeros := (8 - ((bitArray size) \\ 8)) \\ 8.
+
+            bitArray size printNl.
+            
+            paddingZeros printNl.
+            [paddingZeros = 0] whileFalse: [
+               bitArray := bitArray, #(0).
+               paddingZeros := paddingZeros - 1.    
+            ].
+
+            bitArray size printNl.
+            
+            infile close.
+
+            outFilename = nil
+               ifTrue: [writeBitArray value: stdout]
+               ifFalse: [
+               [  |outfile|
+                  outfile := FileStream open: outFilename mode: FileStream write.
+                  writeBitArray value: outfile.
+                  outfile close.
+               ] on: SystemExceptions.FileError do: [:signal |
+                  |errno|
+                  errno := File errno.
+                  stdout flush.
+                  stderr << execname << ': ' << filename << ': '
+                         << signal messageText << nl.
+                  stderr flush.
+               ]
+            ]
+
+         ].
+
       ].
-      
-      eofEncArr := Array new.
-      eofEncStr := encodeTable at: 256.
-      eofEncStr do: [:c |
-         eofTempArr := Array new: 1.
-         eofTempArr at: 1 put: ((c asString) asInteger).
-         eofEncArr := eofEncArr, eofTempArr.
-      ]. 
 
-      bitArray := bitArray, eofEncArr.
 
-      paddingZeros := (8 - ((bitArray size) \\ 8)) \\ 8.
-
-      bitArray size printNl.
-      
-      paddingZeros printNl.
-      [paddingZeros = 0] whileFalse: [
-         bitArray := bitArray, #(0).
-         paddingZeros := paddingZeros - 1.    
+      (flagSet includes: $u)
+      ifTrue: [
+         
       ].
 
 
-      bitArray size printNl.
-      
-      infile close.
 
 
-      "encodeTable inspect."
-      "bitArray inspect."
-
-
-      outFilename = nil
-         ifTrue: [writeBitArray value: stdout]
-         ifFalse: [
-         [  |outfile|
-            outfile := FileStream open: outFilename mode: FileStream write.
-            writeBitArray value: outfile.
-            outfile close.
-         ] on: SystemExceptions.FileError do: [:signal |
-            |errno|
-            errno := File errno.
-            stdout flush.
-            stderr << execname << ': ' << filename << ': '
-                   << signal messageText << nl.
-            stderr flush.
-         ]
-      ]
 
    ]
 
-"iterate over frequency table. create a leaf node for every non-nil
- element and add it to the priority queue"
-"freqtable keysAndValuesDo: [:key :value |
-   (value notNil and: [value > 0]) ifTrue: [
-      |tempLeaf|
-      tempLeaf := Leaf new: key count: value.
-      priority add: tempLeaf. 
-   ]
-
-].
-
-priority inspect."
 
