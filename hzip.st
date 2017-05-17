@@ -8,7 +8,44 @@ priority := SortedCollection new.
 hufTree := ni.
 bitArray := Array new.
 
+Object subclass: OutBits [
+   |bitIndex currentByte myStream|
+   OutBits class >> new [
+      self shouldNotImplement.
+   ]
+   OutBits class >> new: fileStream [
+      |result|
+      result := super new.
+      result init: fileStream.
+      ^result
+   ]
+   clearByte [
+      bitIndex := 8.
+      currentByte := 0.
+   ]
+   init: fileStream [
+      myStream := fileStream.
+      self clearByte.
+   ]
+   flushByte [
+      bitIndex = 8 ifFalse: [
+         myStream nextPutByte: currentByte.
+         self clearByte.
+      ]
+   ]
+   writeBit: bit [
+      currentByte := currentByte bitAt: bitIndex put: bit.
+      bitIndex := bitIndex - 1.
+      bitIndex = 0 ifTrue: [self flushByte].
+   ]
+]
 
+writeBitArray := [:outfile|
+   |outBytes|
+   outBytes := OutBits new: outfile.
+   bitArray do: [:bit| outBytes writeBit: bit].
+   outBytes flushByte.
+].
 
 
 Character extend [
@@ -180,7 +217,7 @@ encodeTable := ZeroArray new: 257.
 (Smalltalk arguments size < 2) | (Smalltalk arguments size > 3)
    ifTrue: [^self error: 'wrong number of arguments']
    ifFalse: [
-      |outFilename inFilename eofEncStr eofEncArr eofTempArr|
+      |outFilename inFilename|
       outFilename := nil.
       inFilename := nil.
       flag := Smalltalk arguments at: 1.
@@ -275,12 +312,43 @@ encodeTable := ZeroArray new: 257.
       ]. 
 
       bitArray := bitArray, eofEncArr.
+
+      paddingZeros := (8 - ((bitArray size) \\ 8)) \\ 8.
+
+      bitArray size printNl.
+      
+      paddingZeros printNl.
+      [paddingZeros = 0] whileFalse: [
+         bitArray := bitArray, #(0).
+         paddingZeros := paddingZeros - 1.    
+      ].
+
+
+      bitArray size printNl.
       
       infile close.
 
-      'encode table' printNl.
+
       "encodeTable inspect."
       "bitArray inspect."
+
+
+      outFilename = nil
+         ifTrue: [writeBitArray value: stdout]
+         ifFalse: [
+         [  |outfile|
+            outfile := FileStream open: outFilename mode: FileStream write.
+            writeBitArray value: outfile.
+            outfile close.
+         ] on: SystemExceptions.FileError do: [:signal |
+            |errno|
+            errno := File errno.
+            stdout flush.
+            stderr << execname << ': ' << filename << ': '
+                   << signal messageText << nl.
+            stderr flush.
+         ]
+      ]
 
    ]
 
