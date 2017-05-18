@@ -5,10 +5,65 @@
 nl := Character nl.
 flag := nil.
 priority := SortedCollection new.
-hufTree := ni.
 bitArray := Array new.
 
+
+FileStream extend [
+   |bitIndex currentChar|
+
+   nextBit [
+      |bit|
+      bitIndex isNil ifTrue: [bitIndex := 0].
+      bitIndex = 0 ifTrue: [
+         bitIndex := 8.
+         currentChar := self next.
+      ].
+      bit := currentChar value bitAt: bitIndex.
+      bitIndex := bitIndex - 1.
+      ^ bit
+   ]
+
+   atBitEnd [
+      ^ (bitIndex isNil | (bitIndex = 0)) & self atEnd
+   ]
+
+]
+
+Object subclass: Stack [
+   |stack topIdx|
+   
+   Stack class >> new [
+      |result|
+      result := super new.
+      result init.
+      ^result
+   ]
+
+   init [
+      stack := Array new: 256.
+      topIdx := 1.
+   ]
+
+   push: item [
+      stack at: topIdx put: item.
+      topIdx := topIdx + 1.
+      topIdx = 257 ifTrue: ['error in stack' printNl.].
+   ]
+
+   pop [
+      |tempIdx|
+      topIdx <= 1 
+      ifTrue: [^nil]
+      ifFalse: [
+         tempIdx := topIdx.
+         topIdx := topIdx - 1.
+         ^ (stack at: tempIdx)
+      ]
+   ]
+]
+
 Object subclass: OutBits [
+      stack := Array new: 256.
    |bitIndex currentByte myStream|
    OutBits class >> new [
       self shouldNotImplement.
@@ -217,7 +272,7 @@ encodeTable := ZeroArray new: 257.
 (Smalltalk arguments size < 2) | (Smalltalk arguments size > 3)
    ifTrue: [^self error: 'wrong number of arguments']
    ifFalse: [
-      |outFilename inFilename|
+      |outFilename inFilename hufTree|
       outFilename := nil.
       inFilename := nil.
       flag := Smalltalk arguments at: 1.
@@ -265,7 +320,7 @@ encodeTable := ZeroArray new: 257.
                priority add: tempLeaf. 
             ]
          ].
-    
+           
          [priority notEmpty] whileTrue: [
             tLeft := priority removeFirst.
             tRight := priority removeFirst.
@@ -364,7 +419,19 @@ encodeTable := ZeroArray new: 257.
 
       (flagSet includes: $u)
       ifTrue: [
-         
+         inputArray := Array new.
+         byteArray := Array new: 8.
+         count := 0.
+         [infile atBitEnd not] whileTrue: [
+            count := count + 1.
+            byteArray at: count  put: (infile nextBit).
+            count = 8 ifTrue: [
+               inputArray := inputArray, byteArray.
+               count := 0.
+            ].
+         ].
+         (inputArray size) printNl.
+         leStack := Stack new.
       ].
 
 
