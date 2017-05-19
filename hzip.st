@@ -52,13 +52,16 @@ Object subclass: Stack [
 
    pop [
       |tempIdx|
-      topIdx <= 1 
+      topIdx < 1 
       ifTrue: [^nil]
       ifFalse: [
-         tempIdx := topIdx.
          topIdx := topIdx - 1.
-         ^ (stack at: tempIdx)
+         ^ (stack at: topIdx)
       ]
+   ]
+   
+   isEmpty [
+      ^ (topIdx = 2)
    ]
 ]
 
@@ -324,7 +327,7 @@ encodeTable := ZeroArray new: 257.
          [priority notEmpty] whileTrue: [
             tLeft := priority removeFirst.
             tRight := priority removeFirst.
-            tTree := Tree new: 0 count: ((tLeft count) + (tRight count)) 
+            tTree := Tree new: (tLeft char) count: ((tLeft count) + (tRight count)) 
                                                  left: tLeft right: tRight.
             priority notEmpty 
             ifTrue: [
@@ -346,7 +349,30 @@ encodeTable := ZeroArray new: 257.
          bitArray := bitArray, #(1).
 
          (flagSet includes: $t) 
-         ifTrue: [ 
+         ifTrue: [
+            "iterate over encode table from 0 to size(257)-1"
+            currentIdx := 0.
+            "stdout <<'encTable size' << (encodeTable size) << nl.
+            stdout flush."
+            0 to: ((encodeTable size) - 1) do: [:a|
+               (encodeTable at: currentIdx) = nil ifFalse: [
+                  "print a char if the currentIdx is a printable
+                   character. otherwise print the currentIdx
+                   as an integer"
+                  charToPrint := nil.
+                  (currentIdx < 33) | (currentIdx > 126) 
+                  ifTrue: [
+                     charToPrint := currentIdx asString.
+                     stdout << '' << charToPrint << nl.
+                  ]
+                  ifFalse: [
+                     charToPrint := (currentIdx asCharacter) asString.
+                      stdout << '' << charToPrint << nl.
+                  ]
+               ].
+               currentIdx := currentIdx + 1.
+            ].
+            stdout flush. 
             'to implement' printNl.
          ].
 
@@ -419,6 +445,8 @@ encodeTable := ZeroArray new: 257.
 
       (flagSet includes: $u)
       ifTrue: [
+         |leStack leTree|
+         leStack := Stack new. 
          inputArray := Array new.
          byteArray := Array new: 8.
          count := 0.
@@ -431,7 +459,60 @@ encodeTable := ZeroArray new: 257.
             ].
          ].
          (inputArray size) printNl.
-         leStack := Stack new.
+         
+         inputArrIdx := 1.
+         stayInLoop := true.
+         [stayInLoop] whileTrue: [
+            (inputArray at: inputArrIdx) = 0 
+            ifTrue: [
+               inputArrIdx := inputArrIdx + 1.
+               accum := 0.
+               "charBinaryArray := ZeroArray new: 8."
+               0 to: 7 do: [:a |
+                  "charBinaryArray at: a put: 
+                        (inputArray at: inputArrIdx).
+                  inputArrIdx := inputArrIdx + 1."
+                  accum := accum + ((inputArray at: inputArrIdx) * 
+                                          (2 raisedTo: (7 - a))).
+                  inputArrIdx := inputArrIdx + 1.
+               ].
+               accum = 0 
+               ifTrue: [
+                  (inputArray at: inputArrIdx) = 1
+                  ifTrue: [
+                     accum := accum + 256.
+                  ].
+                  inputArrIdx := inputArrIdx + 1.
+               ].
+               
+               teaLeaf := Leaf new: accum count: 0.
+               leStack push: teaLeaf.
+            ]
+            ifFalse: [
+               inputArrIdx := inputArrIdx + 1.
+               (leStack isEmpty) ifTrue: [
+                  leTree := leStack pop.
+                  stayInLoop := false.
+               ]
+               ifFalse: [
+                  rChild := leStack pop.
+                  lChild := leStack pop.
+                  "'right child: ' printNl.
+                  rChild inspect.
+                  'left child: ' printNl.
+                  lChild inspect."
+                  teaTree := Tree new: 0 count: 0 
+                                    left: lChild right: rChild.
+                  leStack push: teaTree.                  
+               ]
+            ]
+         ].
+        
+         leTree inorder: [:char :string |
+            stdout << '[' << char<< ']' << string << nl.
+         ] prefix: ''.
+
+
       ].
 
 
