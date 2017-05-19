@@ -449,7 +449,7 @@ encodeTable := ZeroArray new: 257.
 
       (flagSet includes: $u)
       ifTrue: [
-         |leStack leTree|
+         |leStack leTree tempTreePtr|
          leStack := Stack new. 
          inputArray := Array new.
          byteArray := Array new: 8.
@@ -518,7 +518,11 @@ encodeTable := ZeroArray new: 257.
    
          
 
+         tempTreePtr := Leaf new: 0 count: 0.
          tempTreePtr := leTree.
+         tempTreePtr inspect.
+         
+         inputArray inspect.
          
          infile close.
       "   |tempTreePtr llLeaf rrLeaf temptempTreePtr|"
@@ -535,30 +539,54 @@ encodeTable := ZeroArray new: 257.
 
          outFileFD := nil.
 
-         (outFilename = nil)
+        " (outFilename = nil)
          ifTrue: [
             outFileFD := stdout.
-         ]
-         ifFalse: [
+         ]"
+        " ifFalse: ["
             outFileFD := FileStream open: outFilename 
                                     mode: FileStream write.
-         ]
+       "  ]"
 
          inputArrIdx to: (inputArray size) do: [:a |
             ((inputArray at: a) = 0)
             ifTrue: [
-               tempTreePtr := (tempTreePtr left).
+               ((tempTreePtr left) isMemberOf: Leaf) 
+               ifTrue:[
+                  tempTreeLeaf := (tempTreePtr left).
+                  ((tempTreeLeaf char) = 256) 
+                  ifFalse:[
+                     outFileFD << (tempTreeLeaf char) asCharacter.
+                     tempTreePtr := leTree.
+                  ].
+               ]
+               ifFalse: [
+                  tempTreePtr:= (tempTreePtr left).
+               ]
             ]
+            "if not zero"
             ifFalse: [
-               tempTreePtr := (tempTreePtr right).
+               ((tempTreePtr right) isMemberOf: Leaf)
+               ifTrue: [
+                  tempTreeLeaf := (tempTreePtr right).
+                  ((tempTreeLeaf char) = 256)
+                  ifFalse: [
+                     outFileFD << (tempTreeLeaf char) asCharacter.
+                     tempTreePtr := leTree.
+                  ].
+               ]
+               ifFalse: [
+                  tempTreePtr := (tempTreePtr right)
+               ]
             ]
-
-            (tempTreePtr isMemberOf: Leaf) ifTrue: [
+           
+            
+           " (tempTreePtr isMemberOf: Leaf) ifTrue: [
                ((tempTreePtr char) = 256) ifFalse: [
                   outFileFD << (tempTree char) asCharacter.
                   tempTreePtr := leTree.
                ].
-            ].
+            ]."
          ].
 
          outFilename = nil
