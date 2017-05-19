@@ -226,6 +226,10 @@ Object subclass: Leaf [
 Leaf subclass: Tree [
    |left right|
 
+   left [^ left]
+
+   right [^ right]
+
    Tree class >> new: aChar count: aCount [
       self shouldNotImplement
    ]
@@ -511,7 +515,59 @@ encodeTable := ZeroArray new: 257.
          leTree inorder: [:char :string |
             stdout << '[' << char<< ']' << string << nl.
          ] prefix: ''.
+   
+         
 
+         tempTreePtr := leTree.
+         
+         infile close.
+      "   |tempTreePtr llLeaf rrLeaf temptempTreePtr|"
+
+        " llLeaf := Leaf new: 0 count: 0.
+         rrLeaf := Leaf new: 0 count: 0.
+         rrrLeaf := Leaf new: 0 count: 0.
+         internalNode := Tree new: 0 count: 0 left: llLeaf right: rrLeaf. 
+         tempTreePtr := nil.
+         tempTreePtr := Tree new: 0 count: 0 left: internalNode right: rrrLeaf.
+         temptempTreePtr := tempTreePtr.
+
+         leTree inspect."
+
+         outFileFD := nil.
+
+         (outFilename = nil)
+         ifTrue: [
+            outFileFD := stdout.
+         ]
+         ifFalse: [
+            outFileFD := FileStream open: outFilename 
+                                    mode: FileStream write.
+         ]
+
+         inputArrIdx to: (inputArray size) do: [:a |
+            ((inputArray at: a) = 0)
+            ifTrue: [
+               tempTreePtr := (tempTreePtr left).
+            ]
+            ifFalse: [
+               tempTreePtr := (tempTreePtr right).
+            ]
+
+            (tempTreePtr isMemberOf: Leaf) ifTrue: [
+               ((tempTreePtr char) = 256) ifFalse: [
+                  outFileFD << (tempTree char) asCharacter.
+                  tempTreePtr := leTree.
+               ].
+            ].
+         ].
+
+         outFilename = nil
+         ifTrue: [
+            stdout flush.
+         ]
+         ifFalse: [
+            outFileFD close.
+         ]
 
       ].
 
