@@ -518,7 +518,6 @@ encodeTable := ZeroArray new: 257.
    
          
 
-         tempTreePtr := Leaf new: 0 count: 0.
          tempTreePtr := leTree.
          tempTreePtr inspect.
          
@@ -539,15 +538,17 @@ encodeTable := ZeroArray new: 257.
 
          outFileFD := nil.
 
-        " (outFilename = nil)
+         outFilename = nil
          ifTrue: [
             outFileFD := stdout.
-         ]"
-        " ifFalse: ["
+         ].
+         outFilename = nil
+         ifFalse: [
             outFileFD := FileStream open: outFilename 
                                     mode: FileStream write.
-       "  ]"
+        ].
 
+         haveSeenEOF := false.
          inputArrIdx to: (inputArray size) do: [:a |
             ((inputArray at: a) = 0)
             ifTrue: [
@@ -555,10 +556,15 @@ encodeTable := ZeroArray new: 257.
                ifTrue:[
                   tempTreeLeaf := (tempTreePtr left).
                   ((tempTreeLeaf char) = 256) 
+                  ifTrue: [
+                     haveSeenEOF := true.
+                  ]
                   ifFalse:[
-                     outFileFD << (tempTreeLeaf char) asCharacter.
-                     tempTreePtr := leTree.
-                  ].
+                     haveSeenEOF ifFalse: [
+                        outFileFD << (tempTreeLeaf char) asCharacter.
+                        tempTreePtr := leTree.
+                     ].
+                  ]
                ]
                ifFalse: [
                   tempTreePtr:= (tempTreePtr left).
@@ -570,9 +576,14 @@ encodeTable := ZeroArray new: 257.
                ifTrue: [
                   tempTreeLeaf := (tempTreePtr right).
                   ((tempTreeLeaf char) = 256)
+                  ifTrue: [
+                     haveSeenEOF := true.
+                  ]
                   ifFalse: [
-                     outFileFD << (tempTreeLeaf char) asCharacter.
-                     tempTreePtr := leTree.
+                     haveSeenEOF ifFalse: [
+                        outFileFD << (tempTreeLeaf char) asCharacter.
+                        tempTreePtr := leTree.
+                     ].
                   ].
                ]
                ifFalse: [
