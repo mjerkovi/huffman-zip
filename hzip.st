@@ -358,6 +358,21 @@ encodeTable := ZeroArray new: 257.
             currentIdx := 0.
             "stdout <<'encTable size' << (encodeTable size) << nl.
             stdout flush."
+
+
+            outFileFD := nil.
+
+            outFilename = nil
+            ifTrue: [
+               outFileFD := stdout.
+            ].
+            outFilename = nil
+            ifFalse: [
+               outFileFD := FileStream open: outFilename 
+                                       mode: FileStream write.
+           ].
+
+
             0 to: ((encodeTable size) - 1) do: [:a|
                (encodeTable at: currentIdx) = nil ifFalse: [
                   "print a char if the currentIdx is a printable
@@ -366,18 +381,57 @@ encodeTable := ZeroArray new: 257.
                   charToPrint := nil.
                   (currentIdx < 33) | (currentIdx > 126) 
                   ifTrue: [
-                     charToPrint := currentIdx asString.
-                     stdout << '' << charToPrint << nl.
+                     currentIdx = 256
+                     ifTrue: [
+                        charToPrint := 'EOF'.
+                        outFileFD << '' << charToPrint.
+                        freqToPrint := (freqtable at: currentIdx) 
+                                                               asString.
+                        spacesToAdd := 11 - 
+                                (charToPrint size) - (freqToPrint size).
+                        1 to: spacesToAdd do: [:skip| outFileFD << ' '].
+                        outFileFD << freqToPrint << '  '.
+                        outFileFD << (encodeTable at: currentIdx) << nl.
+
+                     ]
+                     ifFalse: [
+                        charToPrint := currentIdx printStringRadix: 16.
+                        charToPrint := charToPrint copyFrom: 4 
+                                                 to: (charToPrint size).
+                        (charToPrint size) = 1
+                        ifTrue: [
+                           charToPrint := '0', charToPrint. 
+                        ].
+                        charToPrint := 'x', charToPrint.
+                        outFileFD << '' << charToPrint.
+                        freqToPrint := (freqtable at: currentIdx) 
+                                                               asString.
+                        spacesToAdd := 11 - 
+                                (charToPrint size) - (freqToPrint size).
+                        1 to: spacesToAdd do: [:skip| outFileFD << ' '].
+                        outFileFD << freqToPrint << '  '.
+                        outFileFD << (encodeTable at: currentIdx) << nl.
+
+                     ]
                   ]
                   ifFalse: [
                      charToPrint := (currentIdx asCharacter) asString.
-                      stdout << '' << charToPrint << nl.
-                  ]
+                     charToPrint := ' ', charToPrint.
+                     outFileFD << '' << charToPrint.
+                     freqToPrint := (freqtable at: currentIdx) 
+                                                            asString.
+                     spacesToAdd := 11 - 
+                             (charToPrint size) - (freqToPrint size).
+                     1 to: spacesToAdd do: [:skip| outFileFD << ' '].
+                     outFileFD << freqToPrint << '  '.
+                     outFileFD << (encodeTable at: currentIdx) << nl.
+
+                  ]                  
+               
                ].
                currentIdx := currentIdx + 1.
             ].
             stdout flush. 
-            'to implement' printNl.
          ].
 
 
