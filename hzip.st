@@ -519,23 +519,9 @@ encodeTable := ZeroArray new: 257.
          
 
          tempTreePtr := leTree.
-         tempTreePtr inspect.
-         
-         inputArray inspect.
-         
+                 
          infile close.
-      "   |tempTreePtr llLeaf rrLeaf temptempTreePtr|"
-
-        " llLeaf := Leaf new: 0 count: 0.
-         rrLeaf := Leaf new: 0 count: 0.
-         rrrLeaf := Leaf new: 0 count: 0.
-         internalNode := Tree new: 0 count: 0 left: llLeaf right: rrLeaf. 
-         tempTreePtr := nil.
-         tempTreePtr := Tree new: 0 count: 0 left: internalNode right: rrrLeaf.
-         temptempTreePtr := tempTreePtr.
-
-         leTree inspect."
-
+  
          outFileFD := nil.
 
          outFilename = nil
@@ -561,7 +547,8 @@ encodeTable := ZeroArray new: 257.
                   ]
                   ifFalse:[
                      haveSeenEOF ifFalse: [
-                        outFileFD << (tempTreeLeaf char) asCharacter.
+                        "outFileFD << (tempTreeLeaf char) asCharacter."
+                        outFileFD nextPutByte: (tempTreeLeaf char).
                         tempTreePtr := leTree.
                      ].
                   ]
@@ -581,7 +568,8 @@ encodeTable := ZeroArray new: 257.
                   ]
                   ifFalse: [
                      haveSeenEOF ifFalse: [
-                        outFileFD << (tempTreeLeaf char) asCharacter.
+                        "outFileFD << (tempTreeLeaf char) asCharacter."
+                        outFileFD nextPutByte: (tempTreeLeaf char).
                         tempTreePtr := leTree.
                      ].
                   ].
@@ -589,15 +577,7 @@ encodeTable := ZeroArray new: 257.
                ifFalse: [
                   tempTreePtr := (tempTreePtr right)
                ]
-            ]
-           
-            
-           " (tempTreePtr isMemberOf: Leaf) ifTrue: [
-               ((tempTreePtr char) = 256) ifFalse: [
-                  outFileFD << (tempTree char) asCharacter.
-                  tempTreePtr := leTree.
-               ].
-            ]."
+            ] 
          ].
 
          outFilename = nil
@@ -609,10 +589,6 @@ encodeTable := ZeroArray new: 257.
          ]
 
       ].
-
-
-
-
 
    ]
 
